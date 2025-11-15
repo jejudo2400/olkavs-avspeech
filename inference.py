@@ -123,6 +123,8 @@ def infer(config, model, vocab, dataset, scores, sampler=None, device='cpu'):
         sampler=sampler
     )
 
+    
+
     for it, (vids, seqs, targets, vid_lengths, seq_lengths, target_lengths, paths) in enumerate(dataloader):
         vids = vids.to(device)
         seqs = seqs.to(device)
@@ -130,17 +132,37 @@ def infer(config, model, vocab, dataset, scores, sampler=None, device='cpu'):
         target_lengths = target_lengths.to(device)
         vid_lengths = vid_lengths.to(device)
         seq_lengths = seq_lengths.to(device)
-        
+
+        mode = config.get('mode', 'avsr')  # 기본값은 AVSR
+
+        # --- 여기부터 추가: 모드에 따라 입력 선택 ---
+        if mode == 'asr':
+            video_inputs = None
+            video_input_lengths = None
+        else:
+            video_inputs = vids
+            video_input_lengths = vid_lengths
+
+        if mode == 'vsr':
+            audio_inputs = None
+            audio_input_lengths = None
+        else:
+            audio_inputs = seqs
+            audio_input_lengths = seq_lengths
+        # --- 여기까지 추가 ---
+
         with torch.no_grad():
             outputs, output_lengths = search(
-                vids, vid_lengths,
-                seqs, seq_lengths,
+                video_inputs, video_input_lengths,
+                audio_inputs, audio_input_lengths,
                 device = device,
                 beam_size = config['beam_size'],
                 D_end = config['EndDetect_D'],
                 M_end = config['EndDetect_M'],
                 mp_num = config['num_mp'],
             )
+
+
 
         path_units = [tr_video_path.strip().split('/') for tr_video_path in paths]
         file_indices = [",".join([path_unit[-2], path_unit[-1].replace(".npy","")]) for path_unit in path_units]

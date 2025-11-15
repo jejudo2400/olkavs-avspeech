@@ -26,26 +26,56 @@ class FusionConformerEncoder(nn.Module):
             encoder_d_model=encoder_d_model, encoder_n_head=encoder_n_head, 
             encoder_ff_dim=encoder_ff_dim, encoder_dropout_p=encoder_dropout_p,
             pass_visual_frontend = pass_visual_frontend)
-        
-    def forward(self, 
+
+    def forward(self, video_inputs, video_input_lengths,
+                audio_inputs, audio_input_lengths):
+
+        # 1) 🔊 ASR-only (오디오만)
+        if video_inputs is None and audio_inputs is not None:
+            # audio_feature: (B, T, D)
+            audio_feature = self.audio_model(
+                audio_inputs, audio_input_lengths
+            )
+            B, T, D = audio_feature.size()
+            visual_feature = torch.zeros(B, T, D, device=audio_feature.device,
+                                        dtype=audio_feature.dtype)
+            fused = self.fusion(visual_feature, audio_feature)   # (B, T, 2D)
+            return fused
+
+
+
+
+        # 2) 👄 VSR-only (영상만)
+        if video_inputs is not None and audio_inputs is None:
+            visual_feature = self.visual_model(
+                video_inputs, video_input_lengths,
+                None, None
+            )
+            B, T, D = visual_feature.size()
+            audio_feature = torch.zeros(B, T, D, device=visual_feature.device,
+                                        dtype=visual_feature.dtype)
+            fused = self.fusion(visual_feature, audio_feature)   # (B, T, 2D=512)
+            return fused
+
+        # 3) 🔊+👄 AVSR (둘 다 있는 경우, 원래 방식)
+        visual_feature = self.visual_model(
             video_inputs, video_input_lengths,
-            audio_inputs, audio_input_lengths,
-            *args, **kwargs):
-        audio_feature = self.audio_model(None, None, audio_inputs, audio_input_lengths)
-        visual_feature = self.visual_model(video_inputs, video_input_lengths, None, None)
-        features = self.fusion(visual_feature, audio_feature)
-        return features
-        
+            None, None
+        )
+        audio_feature = self.audio_model(
+            audio_inputs, audio_input_lengths
+        )
+        fused = self.fusion(visual_feature, audio_feature)       # (B, T, 2D)
+        return fused 
+
+
     def fusion(self, visual_feature, audio_feature):
         diff = audio_feature.size(1) - visual_feature.size(1)
         front_margin = diff//2
         back_margin = diff - front_margin
         visual_feature = F.pad(visual_feature, (0, 0, front_margin, back_margin), 'constant', 0)
-    
         outputs = torch.cat([visual_feature, audio_feature], dim=-1)
-        
         return outputs
-
 
 class AudioConformerEncoder(nn.Module):
     def __init__(
@@ -62,12 +92,11 @@ class AudioConformerEncoder(nn.Module):
         self.projection = nn.Linear(front_dim, encoder_d_model)
         
     def forward(
-            self, 
-            video_inputs, video_input_lengths,
+            self,
             audio_inputs, audio_input_lengths,
             *args, **kwargs):
         outputs = self.front(audio_inputs)
-        outputs = outputs.permute(0,2,1) # (B, L, C)
+        outputs = outputs.permute(0, 2, 1)  # (B, L, C)
         outputs = self.projection(outputs)
         outputs = self.back(outputs, audio_input_lengths)
         return outputs

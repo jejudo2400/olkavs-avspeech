@@ -65,20 +65,24 @@ class SearchSequence:
 
         self.mp_num = mp_num
 
-    def __call__(
-        self,
-        video_inputs,
-        video_input_lengths,
-        audio_inputs,
-        audio_input_lengths,
-        beam_size : int = 1,
-        D_end : int = -4,
-        M_end : int = 12,
-        device = 'cpu',
-        mp_num : int = 1,
-        *args, **kwargs
-    ):
-        batch_size = video_inputs.size(0)
+    def __call__(self,
+             video_inputs, video_input_lengths,
+             audio_inputs, audio_input_lengths,
+             device='cuda',
+             beam_size=1,
+             D_end=5,
+             M_end=10,
+             mp_num=1):
+
+        # ASR-only 모드: video_inputs가 None이라면 오디오 입력 기준으로 batch 생성
+        if video_inputs is None:
+            use_video = False
+            batch_size = audio_inputs.size(0)
+        else:
+            use_video = True
+            batch_size = video_inputs.size(0)
+
+
 
         hypothesis = torch.full((batch_size, self.max_len), self.pad_id).to(device)
         max_lengths = torch.zeros(batch_size, dtype=int).to(device)
@@ -114,9 +118,28 @@ class SearchSequence:
         shared_outputs: List= None,
         *args, **kwargs
     ):
-        batch_size = video_inputs.size(0)
-        features = self.model.encoder(video_inputs, video_input_lengths,
-                                audio_inputs, audio_input_lengths)
+        # ASR-only: video_inputs=None일 때
+        if video_inputs is None:
+            use_video = False
+            batch_size = audio_inputs.size(0)
+        else:
+            use_video = True
+            batch_size = video_inputs.size(0)
+
+        if use_video:
+            features = self.model.encoder(
+                video_inputs, video_input_lengths,
+                audio_inputs, audio_input_lengths
+            )
+        else:
+            # 🔥 ASR-only: audio encoder만 실행
+            # visual encoder의 시그니처 때문에 video에 dummy를 넣거나
+            # encoder 내부 조건 분기를 따라야 할 수도 있다
+            features = self.model.encoder(
+                None, None,
+                audio_inputs, audio_input_lengths
+            )
+
         features = self.model.medium(features)
         
         self._search(features, beam_size, D_end, M_end, device, 0, batch_size, shared_outputs)

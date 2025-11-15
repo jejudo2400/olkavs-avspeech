@@ -1,2 +1,2 @@
-sample_data/my1.mp4	sample_data/my1.wav	오늘 점심 뭐 먹지	16 32 7 42 52 4 17 28 60 14 44 60 4 11 38 4 11 28 45 17 44
-sample_data/my2.mp4	sample_data/my2.wav	안녕하세요 반갑습니다	0 15 4 10 28 45 60 4 17 28 45 52
+sample_data/my1.mp4	sample_data/my1.wav	캡스톤 디자인 테스트입니다	20 25 61 14 42 21 32 48 8 44 17 24 16 44 48 4 21 29 14 42 21 42 4 16 30 65 14 24 65 16 44 61 7 44 8 24
+sample_data/my2.mp4	sample_data/my2.wav	안녕하세요 반갑습니다	16 24 48 7 30 65 23 24 14 29 16 36 4 12 24 48 5 24 61 14 42 61 7 44 8 24

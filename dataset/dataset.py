@@ -126,10 +126,12 @@ def _parse_video(video_path, is_raw=False):
         video -= torch.mean(video)
         video /= torch.std(video)
     else:
-        video = np.load(video_path)
+        # 🔥 샘플 데이터(.npy) 로딩용: 피클 허용
+        video = np.load(video_path, allow_pickle=True)
         video = torch.from_numpy(video).float()
         
     return video
+
 
 def _parse_audio(signal, transform, normalize):
     signal = signal.reshape(-1,)    
