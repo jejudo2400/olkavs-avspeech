@@ -8,7 +8,7 @@ from torch.utils.data import DataLoader, Sampler
 
 from avsr.utils.getter import get_metric, select_search
 from avsr.utils.model_builder import build_model
-from vocabulary.utils import KsponSpeechVocabulary
+from vocabulary.utils import KsponSpeechVocabulary, grp2char
 from dataset.dataset import *
 
 mp = mp.get_context('spawn')
@@ -141,6 +141,7 @@ def infer(config, model, vocab, dataset, scores, sampler=None, device='cpu'):
                 M_end = config['EndDetect_M'],
                 mp_num = config['num_mp'],
             )
+
         path_units = [tr_video_path.strip().split('/') for tr_video_path in paths]
         file_indices = [",".join([path_unit[-2], path_unit[-1].replace(".npy","")]) for path_unit in path_units]
 
@@ -152,6 +153,22 @@ def infer(config, model, vocab, dataset, scores, sampler=None, device='cpu'):
         
         (ge, gl), (ce, cl), (we, wl), (swe, swl) = errorRates
         scores += torch.tensor([1, ge, gl, ce, cl, we, wl, swe, swl])
+        
+        for b in range(outputs.size(0)):
+            # 텐서 형태로 다시 만들기
+            pred_seq = outputs[b, :output_lengths[b]]
+            true_seq = targets[b, 1:1+target_lengths[b]]
+
+            gt_jaso = vocab.label_to_string(true_seq.unsqueeze(0))[0]
+            pred_jaso = vocab.label_to_string(pred_seq.unsqueeze(0))[0]
+
+            gt_text = grp2char(gt_jaso)
+            pred_text = grp2char(pred_jaso)
+
+
+            print("\n===== Utterance {} =====".format(file_indices[b]))
+            print("GT  :", gt_text)
+            print("Pred:", pred_text)
         
         
         # show description

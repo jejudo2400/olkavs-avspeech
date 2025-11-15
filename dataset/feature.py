@@ -4,10 +4,10 @@ import numpy as np
 from torch import Tensor, FloatTensor
 import torchaudio
 
-if platform.system() == 'Windows':
-    torchaudio.set_audio_backend("soundfile")
-elif platform.system() == 'Linux':
-    torchaudio.set_audio_backend("sox_io")
+# if platform.system() == 'Windows':
+#     torchaudio.set_audio_backend("soundfile")
+# elif platform.system() == 'Linux':
+#     torchaudio.set_audio_backend("sox_io")
 
 
 class Spectrogram(object):

@@ -9,10 +9,12 @@ import warnings
 
 import torch
 import torchaudio
-if platform.system() == 'Windows':
-    torchaudio.set_audio_backend("soundfile")
-elif platform.system() == 'Linux':
-    torchaudio.set_audio_backend("sox_io")
+# if platform.system() == 'Windows':
+#     # torchaudio.set_audio_backend("soundfile")
+#     pass
+# elif platform.system() == 'Linux':
+#     # torchaudio.set_audio_backend("sox_io")
+#     pass
 from torch import Tensor, FloatTensor
 from torch.utils.data import Dataset
 

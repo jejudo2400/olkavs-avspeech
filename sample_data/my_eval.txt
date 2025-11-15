@@ -1,0 +1,2 @@
+sample_data/my1.mp4	sample_data/my1.wav	오늘 점심 뭐 먹지	16 32 7 42 52 4 17 28 60 14 44 60 4 11 38 4 11 28 45 17 44
+sample_data/my2.mp4	sample_data/my2.wav	안녕하세요 반갑습니다	0 15 4 10 28 45 60 4 17 28 45 52
