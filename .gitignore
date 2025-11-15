@@ -130,3 +130,5 @@ dmypy.json
 
 # Custom
 results/
+zoo/*.pt
+!zoo/README.md
