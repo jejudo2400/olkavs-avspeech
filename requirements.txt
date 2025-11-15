@@ -1,4 +1,5 @@
-torch>1.7.1+cu110
+# Install the desired CUDA build separately if needed
+torch>=1.7.1
 torchaudio>0.7.2
 numpy
 librosa
