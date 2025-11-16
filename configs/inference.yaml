@@ -1,7 +1,7 @@
 ## Inference configuration
 random_seed: 2207
 
-transcripts_path_test: sample_data/eval.txt
+transcripts_path_test: sample_data/my_eval_processed.txt
 model_path: './zoo/audio_visual.pt'
 log_path: 'LOGS.txt'
 script_path: 'output_script.txt'
@@ -27,7 +27,7 @@ max_len: 200
 
 mode: avsr
 use_video: True
-raw_video: False
+raw_video: True
 
 audio_transform_method: 'raw' # raw/fbank
 audio_sample_rate: 14400

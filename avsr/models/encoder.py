@@ -42,9 +42,6 @@ class FusionConformerEncoder(nn.Module):
             fused = self.fusion(visual_feature, audio_feature)   # (B, T, 2D)
             return fused
 
-
-
-
         # 2) 👄 VSR-only (영상만)
         if video_inputs is not None and audio_inputs is None:
             visual_feature = self.visual_model(

@@ -1,6 +1,7 @@
 import yaml
 import time
 import argparse
+from pathlib import Path
 
 import torch
 import torch.multiprocessing as mp
@@ -12,8 +13,6 @@ from vocabulary.utils import KsponSpeechVocabulary, grp2char
 from dataset.dataset import *
 
 mp = mp.get_context('spawn')
-
-
 
 class SubsetSampler(Sampler):
     def __init__(self, indices):
@@ -164,8 +163,8 @@ def infer(config, model, vocab, dataset, scores, sampler=None, device='cpu'):
 
 
 
-        path_units = [tr_video_path.strip().split('/') for tr_video_path in paths]
-        file_indices = [",".join([path_unit[-2], path_unit[-1].replace(".npy","")]) for path_unit in path_units]
+        path_units = [Path(path).parts for path in dataset.video_paths]
+        file_indices = [",".join([parts[-2], parts[-1].replace(".npy", "")])for parts in path_units if len(parts) >= 2]
 
         errorRates = list()
         for metric in metrics:
