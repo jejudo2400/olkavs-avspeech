@@ -2,7 +2,7 @@
 random_seed: 2207
 
 transcripts_path_test: sample_data/my_eval_processed.txt
-model_path: './zoo/audio_visual.pt'
+model_path: './results/dummy.pt'
 log_path: 'LOGS.txt'
 script_path: 'output_script.txt'
 
