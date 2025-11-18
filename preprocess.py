@@ -12,6 +12,10 @@ import librosa
 import soundfile
 import skvideo.io
 import numpy as np
+if not hasattr(np, "float"):
+    np.float = float
+if not hasattr(np, "int"):
+    np.int = int
 from numpy import ndarray
 
 from vocabulary.utils import char2grp
