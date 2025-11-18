@@ -1,0 +1,12 @@
+{
+  "video": "sample_data\\processed_videos\\my1_crop.mp4",
+  "audio": "sample_data\\my1.wav",
+  "avsr_text": "            ",
+  "whisper_text": "캡스톤 디자인 테스트 영상입니다.",
+  "fused_text": "            ",
+  "avsr_jaso": "\\ㄹ\\ㅍ \\ㅍ \\ㅍ \\ㅍ \\ㅍ \\ㅍ \\ㅍ \\ㅍ \\ㅍ \\ㅍ \\ㅍ \\ㅍ ",
+  "weights": {
+    "avsr": 0.6,
+    "whisper": 0.4
+  }
+}

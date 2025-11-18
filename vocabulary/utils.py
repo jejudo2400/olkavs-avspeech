@@ -175,6 +175,19 @@ class KsponSpeechVocabulary(Vocabulary):
         Returns: sentence
             - **sentence** (str or list): symbol of labels
         """
+        # Accept python list / tuple / torch.Tensor / numpy array uniformly
+        # Convert list or tuple to torch tensor so .shape is available
+        if not hasattr(labels, 'shape'):
+            try:
+                import torch
+                labels = torch.tensor(labels)
+            except Exception:
+                # Fallback: create a minimal wrapper supporting iteration
+                class _Wrap(list):
+                    @property
+                    def shape(self):
+                        return (len(self),)
+                labels = _Wrap(labels)
 
         if len(labels.shape) == 1:
             sentence = list() if tolist else str()
