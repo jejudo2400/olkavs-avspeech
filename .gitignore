@@ -132,3 +132,9 @@ dmypy.json
 results/
 zoo/*.pt
 !zoo/README.md
+# Local sample/test media (avoid bloating repo with large files)
+sample_data/
+test_preprocessed/
+
+# Project-specific virtual environments
+venv_*/

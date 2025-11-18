@@ -1,7 +1,7 @@
 ## Inference configuration
 random_seed: 2207
 
-transcripts_path_test: sample_data/my_eval_processed.txt
+transcripts_path_test: sample_data/test_eval_mediapipe.txt
 model_path: './zoo/audio_visual.pt'
 log_path: 'LOGS.txt'
 script_path: 'output_script.txt'
