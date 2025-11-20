@@ -4,14 +4,25 @@ import glob
 import numpy as np
 import soundfile as sf
 
+def resample_audio(audio, orig_sr, target_sr):
+    """Simple linear resampling to match differing sample rates."""
+    if orig_sr == target_sr:
+        return audio
+    duration = len(audio) / orig_sr
+    target_len = max(1, int(round(duration * target_sr)))
+    orig_times = np.linspace(0.0, duration, num=len(audio), endpoint=False)
+    target_times = np.linspace(0.0, duration, num=target_len, endpoint=False)
+    return np.interp(target_times, orig_times, audio)
+
 def load_wav_mono(path, target_sr=None):
     audio, sr = sf.read(path)
     # stereo -> mono
     if audio.ndim > 1:
         audio = audio.mean(axis=1)
-    # 여기서는 샘플레이트 변환은 생략(이미 AIHub 전처리 sr에 맞춰져 있다고 가정)
+    # 필요 시 리샘플링으로 목표 샘플레이트와 맞춘다
     if target_sr is not None and sr != target_sr:
-        raise ValueError(f"Sample rate mismatch: {sr} != {target_sr}")
+        audio = resample_audio(audio, sr, target_sr)
+        sr = target_sr
     return audio, sr
 
 def repeat_or_trim(noise, target_len):
@@ -62,7 +73,8 @@ def process_folder(clean_dir, noise_path, out_dir, snr_list, sr=None):
         if sr is None:
             sr = clean_sr
             if noise_sr != sr:
-                raise ValueError(f"Noise sr ({noise_sr}) and clean sr ({sr}) must match.")
+                noise = resample_audio(noise, noise_sr, sr)
+                noise_sr = sr
         else:
             if clean_sr != sr:
                 raise ValueError(f"Sample rate mismatch in {clean_path}: {clean_sr} != {sr}")
