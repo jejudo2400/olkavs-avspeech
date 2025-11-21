@@ -8,9 +8,9 @@ from pathlib import Path
 from difflib import SequenceMatcher
 
 try:
-    import whisper_noise_test
+    import whisper
 except ImportError:
-    whisper_noise_test = None  # We will warn later.
+    whisper = None  # We will warn later.
 
 from vocabulary.utils import KsponSpeechVocabulary, grp2char
 from avsr.utils.model_builder import build_model
@@ -19,6 +19,38 @@ from dataset.dataset import _parse_video, _parse_audio  # avoid _parse_transcrip
 
 import librosa
 import numpy as np
+import json
+
+def load_gt(eval_txt):
+    mapping = {}
+    with open(eval_txt, encoding="utf-8") as f:
+        for line in f:
+            vid, aud, transcript = line.strip().split("\t")
+            mapping[(vid, aud)] = transcript
+    return mapping
+    
+def load_gt_text(video_path):
+    """
+    AIHub JSON에서 GT(정답문장) 로드.
+    video_path: .../0.mp4  → json 파일은 같은 디렉터리의 parent.json
+    """
+    base = os.path.splitext(video_path)[0]  # ...\0
+    dir_path = os.path.dirname(base)        # ...\lip_J_1...\ 
+    # JSON 파일 이름: 같은 경로의 상위 파일
+    # AIHub 구조에서는 보통 해당 utt 폴더 경로에 JSON이 있음
+    json_candidates = [f for f in os.listdir(dir_path) if f.endswith(".json")]
+
+    if not json_candidates:
+        return ""
+
+    json_path = os.path.join(dir_path, json_candidates[0])
+    try:
+        with open(json_path, "r", encoding="utf-8") as f:
+            j = json.load(f)
+        # 실제 라벨 구조에 따라 조정해야 할 수 있음
+        return j["classes"][0]["annotation"]["label"]
+    except:
+        return ""
 
 
 def load_checkpoint(model, checkpoint_path, device='cpu'):
@@ -161,9 +193,9 @@ def avsr_ctc_confidence(
 
 
 def whisper_infer_with_conf(audio_path, model_size="small", language=None, method: str = 'avg'):
-    if whisper_noise_test is None:
+    if whisper is None:
         raise ImportError("whisper is not installed. pip install openai-whisper")
-    model = whisper_noise_test.load_model(model_size)
+    model = whisper.load_model(model_size)
     # word_timestamps=True to increase chance of token-level probabilities
     result = model.transcribe(audio_path, language=language, word_timestamps=True)
     text = result.get('text', '').strip()
@@ -343,7 +375,7 @@ def main():
         print(f"[WARN] Failed to compute AVSR CTC confidence: {e}")
         avsr_conf, avsr_frame_max_list, avsr_stats = None, [], {}
 
-    if whisper_noise_test is None:
+    if whisper is None:
         print("[WARN] Whisper not installed; skipping whisper transcription. pip install openai-whisper")
         whisper_text, stt_conf, stt_probs, stt_stats = '', None, [], {}
     else:
@@ -377,7 +409,8 @@ def main():
     print(f"Selected({decision}): {selected}")
 
     try:
-        import json
+        gt_text = load_gt_text(args.video_path)
+
         with open(args.out, 'w', encoding='utf-8') as fw:
             debug_section = {
                 'avsr_stats': avsr_stats,
@@ -399,6 +432,7 @@ def main():
             json.dump({
                 'video': args.video_path,
                 'audio': args.audio_path,
+                'gt_text': gt_text,  # ← 추가
                 'avsr_text': avsr_text,
                 'avsr_ctc_confidence': avsr_conf,
                 'whisper_text': whisper_text,
@@ -415,6 +449,7 @@ def main():
                 },
                 'debug': debug_section,
             }, fw, ensure_ascii=False, indent=2)
+
         print(f"Saved fused output JSON -> {args.out}")
     except Exception as e:
         print(f"[WARN] Failed to save JSON: {e}")
