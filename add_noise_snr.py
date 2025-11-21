@@ -33,21 +33,40 @@ def repeat_or_trim(noise, target_len):
     noise_rep = np.tile(noise, n_repeat)
     return noise_rep[:target_len]
 
-def mix_at_snr(clean, noise, snr_db):
+def mix_at_snr(
+    clean,
+    noise,
+    snr_db,
+    noise_gain=1.0,
+    clean_gain=1.0,
+    headroom_db=None,
+    snr_offset=0.0,
+):
     """
     clean, noise: 1D numpy array (same length)
     snr_db: 원하는 SNR (dB), 예: 5, 10, 20
+    noise_gain / clean_gain: optional pre-scaling
+    headroom_db: when SNR<0, clamp the computed noise gain to this headroom (dB)
+    snr_offset: shift requested SNR (dB)
     """
+    clean_scaled = clean * clean_gain
+    noise_pre_scaled = noise * noise_gain
+
     # 신호/노이즈 파워
-    p_clean = np.mean(clean ** 2)
-    p_noise = np.mean(noise ** 2) + 1e-12  # 0 나눔 방지용 작은 값
+    p_clean = np.mean(clean_scaled ** 2)
+    p_noise = np.mean(noise_pre_scaled ** 2) + 1e-12  # 0 나눔 방지용 작은 값
 
     # 원하는 SNR: p_clean / (a^2 * p_noise) = 10^(snr_db/10)
-    target_ratio = 10 ** (snr_db / 10.0)
+    effective_snr = snr_db + snr_offset
+    target_ratio = 10 ** (effective_snr / 10.0)
     a = np.sqrt(p_clean / (p_noise * target_ratio))
 
-    noise_scaled = noise * a
-    noisy = clean + noise_scaled
+    if effective_snr < 0 and headroom_db is not None:
+        max_gain = 10 ** (headroom_db / 20.0)
+        a = min(a, max_gain)
+
+    noise_scaled = noise_pre_scaled * a
+    noisy = clean_scaled + noise_scaled
 
     # clipping 방지: [-1, 1] 범위로 스케일링
     max_abs = np.max(np.abs(noisy)) + 1e-12
@@ -56,7 +75,17 @@ def mix_at_snr(clean, noise, snr_db):
 
     return noisy
 
-def process_folder(clean_dir, noise_path, out_dir, snr_list, sr=None):
+def process_folder(
+    clean_dir,
+    noise_path,
+    out_dir,
+    snr_list,
+    sr=None,
+    noise_gain=1.0,
+    clean_gain=1.0,
+    headroom_db=None,
+    snr_offset=0.0,
+):
     os.makedirs(out_dir, exist_ok=True)
 
     # 소음 파일 로드
@@ -83,7 +112,15 @@ def process_folder(clean_dir, noise_path, out_dir, snr_list, sr=None):
         noise_segment = repeat_or_trim(noise, len(clean))
 
         for snr_db in snr_list:
-            noisy = mix_at_snr(clean, noise_segment, snr_db)
+            noisy = mix_at_snr(
+                clean,
+                noise_segment,
+                snr_db,
+                noise_gain=noise_gain,
+                clean_gain=clean_gain,
+                headroom_db=headroom_db,
+                snr_offset=snr_offset,
+            )
 
             rel_path = os.path.relpath(clean_path, clean_dir)
             base, _ = os.path.splitext(rel_path)
@@ -105,10 +142,18 @@ if __name__ == "__main__":
                         help="소음 wav 파일 경로 (예: cafe_noise.wav)")
     parser.add_argument("--out_dir", type=str, required=True,
                         help="노이즈가 섞인 wav를 저장할 폴더")
-    parser.add_argument("--snrs", type=float, nargs="+", default=[5, 10, 20],
+    parser.add_argument("--snrs", type=float, nargs="+", default=[0, -5, -10],
                         help="추가할 SNR 리스트 (dB)")
     parser.add_argument("--sr", type=int, default=None,
                         help="기대 샘플레이트 (예: 16000). None이면 첫 파일 sr 기준")
+    parser.add_argument("--noise_gain", type=float, default=0.85,
+                        help="노이즈에 적용할 사전 스케일 (기본 0.85)")
+    parser.add_argument("--clean_gain", type=float, default=1.0,
+                        help="클린 오디오에 적용할 사전 스케일 (기본 1.0)")
+    parser.add_argument("--headroom_db", type=float, default=6.0,
+                        help="음수 SNR 시 노이즈 게인 상한 (dB, 기본 6dB)")
+    parser.add_argument("--snr_offset", type=float, default=2.0,
+                        help="요청 SNR에 더해지는 오프셋 (dB, 기본 +2dB)")
 
     args = parser.parse_args()
 
@@ -117,5 +162,9 @@ if __name__ == "__main__":
         noise_path=args.noise_wav,
         out_dir=args.out_dir,
         snr_list=args.snrs,
-        sr=args.sr
+        sr=args.sr,
+        noise_gain=args.noise_gain,
+        clean_gain=args.clean_gain,
+        headroom_db=args.headroom_db,
+        snr_offset=args.snr_offset,
     )
