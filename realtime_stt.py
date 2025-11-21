@@ -1,4 +1,4 @@
-import whisper
+import whisper_noise_test
 import sounddevice as sd
 import numpy as np
 import time
@@ -13,7 +13,7 @@ BLOCK_SIZE = int(SAMPLE_RATE * DURATION)
 # 더 높은 정확도를 원하면 "small", "medium", "large" 등을 사용할 수 있으나,
 # 그만큼 처리 속도가 느려집니다. 실시간용으로는 "base"나 "small"을 추천합니다.
 try:
-    model = whisper.load_model("base")
+    model = whisper_noise_test.load_model("base")
     print("Whisper 'base' 모델을 로드했습니다.")
 except Exception as e:
     print(f"모델 로드 중 오류 발생: {e}")

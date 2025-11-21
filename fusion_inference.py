@@ -8,9 +8,9 @@ from pathlib import Path
 from difflib import SequenceMatcher
 
 try:
-    import whisper
+    import whisper_noise_test
 except ImportError:
-    whisper = None  # We will warn later.
+    whisper_noise_test = None  # We will warn later.
 
 from vocabulary.utils import KsponSpeechVocabulary, grp2char
 from avsr.utils.model_builder import build_model
@@ -161,9 +161,9 @@ def avsr_ctc_confidence(
 
 
 def whisper_infer_with_conf(audio_path, model_size="small", language=None, method: str = 'avg'):
-    if whisper is None:
+    if whisper_noise_test is None:
         raise ImportError("whisper is not installed. pip install openai-whisper")
-    model = whisper.load_model(model_size)
+    model = whisper_noise_test.load_model(model_size)
     # word_timestamps=True to increase chance of token-level probabilities
     result = model.transcribe(audio_path, language=language, word_timestamps=True)
     text = result.get('text', '').strip()
@@ -343,7 +343,7 @@ def main():
         print(f"[WARN] Failed to compute AVSR CTC confidence: {e}")
         avsr_conf, avsr_frame_max_list, avsr_stats = None, [], {}
 
-    if whisper is None:
+    if whisper_noise_test is None:
         print("[WARN] Whisper not installed; skipping whisper transcription. pip install openai-whisper")
         whisper_text, stt_conf, stt_probs, stt_stats = '', None, [], {}
     else:
