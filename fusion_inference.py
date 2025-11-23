@@ -412,16 +412,15 @@ def main():
     # Selection by confidence thresholds and comparison
     stt_c = stt_conf if stt_conf is not None else 0.0
     avsr_c = avsr_conf if avsr_conf is not None else 0.0
-
-    if stt_c < args.threshold_low and avsr_c > args.threshold_high:  # AVSR preferred
-        selected = avsr_text
-        decision = 'AVSR'
-    elif stt_c > avsr_c:  # STT preferred
+    if stt_c > args.threshold_high:          # T_good
         selected = whisper_text
-        decision = 'STT'
-    else:  # Default to AVSR
+        decision = 'STT_conf_good'
+    elif stt_c < args.threshold_low:         # T_bad
         selected = avsr_text
-        decision = 'AVSR'
+        decision = 'AVSR_conf_bad_stt'
+    else:
+        selected = whisper_text              # 중간 구간도 STT
+        decision = 'STT_mid_range'
 
     print("\n=== Fusion Inference Result ===")
     print(f"AVSR   : {avsr_text}")
