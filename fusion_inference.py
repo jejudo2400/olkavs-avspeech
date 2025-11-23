@@ -15,11 +15,14 @@ except ImportError:
 from vocabulary.utils import KsponSpeechVocabulary, grp2char
 from avsr.utils.model_builder import build_model
 from avsr.utils.getter import select_search
-from dataset.dataset import _parse_video, _parse_audio  # avoid _parse_transcript for empty dummy
+from dataset.dataset import _parse_video, _parse_audio  
 
 import librosa
 import numpy as np
 import json
+
+STT_SAFETY_THRESHOLD = 0.9       # STT가 이 점수 이상이면 무조건 신뢰 (High Precision)
+CONFIDENCE_MARGIN = 0.1          # AVSR이 STT를 뒤집기 위해 필요한 최소 격차 (Robustness)
 
 def load_gt_text_from_video_path(video_path: str) -> str:
     """Return Sentence_info text aligned with the clip index in the clean AIHub JSON."""
@@ -413,13 +416,13 @@ def main():
     stt_c = stt_conf if stt_conf is not None else 0.0
     avsr_c = avsr_conf if avsr_conf is not None else 0.0
     # 1. STT가 매우 확실한 경우 (0.9 이상): STT 우선 (STT는 보통 매우 정확함)
-    if stt_c > 0.9:
+    if stt_c > STT_SAFETY_THRESHOLD:
         selected = whisper_text
         decision = 'STT_very_high'
         
     # 2. 오직 AVSR이 STT보다 "유의미하게(0.1 이상)" 신뢰도가 높을 때만 교체
     # (둘 다 점수가 낮은 경우에는 문맥 생성 능력이 좋은 STT를 따르는 것이 안전함)
-    elif avsr_c > stt_c + 0.1:
+    elif avsr_c > stt_c + CONFIDENCE_MARGIN:
         selected = avsr_text
         decision = 'AVSR_better_confidence_gap'
         
