@@ -12,8 +12,15 @@ def collect_fusion(json_root, out_csv):
                 continue
 
             path = os.path.join(root, file)
+            if os.path.basename(path) == "lip_J_1_F_02_C002_A_001.json":
+                continue
             with open(path, "r", encoding="utf-8") as f:
                 j = json.load(f)
+
+            if isinstance(j, list):
+                if not j:
+                    continue
+                j = j[0]
 
             audio = j.get("audio", "")
             video = j.get("video", "")
