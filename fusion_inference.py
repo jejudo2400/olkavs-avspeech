@@ -412,15 +412,21 @@ def main():
     # Selection by confidence thresholds and comparison
     stt_c = stt_conf if stt_conf is not None else 0.0
     avsr_c = avsr_conf if avsr_conf is not None else 0.0
-    if stt_c > args.threshold_high:          # T_good
+    # 1. STT가 매우 확실한 경우 (0.9 이상): STT 우선 (STT는 보통 매우 정확함)
+    if stt_c > 0.9:
         selected = whisper_text
-        decision = 'STT_conf_good'
-    elif stt_c < args.threshold_low:         # T_bad
+        decision = 'STT_very_high'
+        
+    # 2. 오직 AVSR이 STT보다 "유의미하게(0.1 이상)" 신뢰도가 높을 때만 교체
+    # (둘 다 점수가 낮은 경우에는 문맥 생성 능력이 좋은 STT를 따르는 것이 안전함)
+    elif avsr_c > stt_c + 0.1:
         selected = avsr_text
-        decision = 'AVSR_conf_bad_stt'
+        decision = 'AVSR_better_confidence_gap'
+        
+    # 3. 그 외의 경우 (비슷하거나 STT가 약간 더 높음): STT Fallback
     else:
-        selected = whisper_text              # 중간 구간도 STT
-        decision = 'STT_mid_range'
+        selected = whisper_text
+        decision = 'STT_fallback'
 
     print("\n=== Fusion Inference Result ===")
     print(f"AVSR   : {avsr_text}")
