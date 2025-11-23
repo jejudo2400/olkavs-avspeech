@@ -8,9 +8,9 @@ from pathlib import Path
 from difflib import SequenceMatcher
 
 try:
-    import whisper_noise_test
+    import whisper
 except ImportError:
-    whisper_noise_test = None  # We will warn later.
+    whisper = None  # We will warn later.
 
 from vocabulary.utils import KsponSpeechVocabulary, grp2char
 from avsr.utils.model_builder import build_model
@@ -19,6 +19,63 @@ from dataset.dataset import _parse_video, _parse_audio  # avoid _parse_transcrip
 
 import librosa
 import numpy as np
+import json
+
+def load_gt_text_from_video_path(video_path: str) -> str:
+    """Return Sentence_info text aligned with the clip index in the clean AIHub JSON."""
+    try:
+        vp = Path(video_path)
+        clip_stem = vp.stem
+        clip_idx = None
+        try:
+            clip_idx = int(clip_stem)
+        except ValueError:
+            pass
+
+        sent_dir = vp.parent  # .../lip_J_xxx
+        raw_dir = Path(sent_dir.as_posix())
+        replacements = [
+            ("/sample_data/test_preprocessed_noisy/test", "/sample_data/test"),
+            ("/sample_data/test_preprocessed/test", "/sample_data/test"),
+        ]
+        raw_str = raw_dir.as_posix()
+        for old, new in replacements:
+            if old in raw_str:
+                raw_str = raw_str.replace(old, new)
+                break
+        raw_dir = Path(raw_str)
+        gt_json = raw_dir.parent / f"{raw_dir.name}.json"
+        if not gt_json.exists():
+            alt_path = raw_dir / f"{raw_dir.name}.json"
+            if alt_path.exists():
+                gt_json = alt_path
+        if not gt_json.exists():
+            print(f"[WARN] GT json missing: {gt_json}")
+            return ""
+
+        with open(gt_json, "r", encoding="utf-8") as f:
+            meta = json.load(f)
+        if isinstance(meta, list) and meta:
+            meta = meta[0]
+        sentences = meta.get("Sentence_info") or []
+        if not sentences:
+            return ""
+
+        if clip_idx is not None:
+            target_id = clip_idx + 1  # Sentence_info IDs start at 1
+            for sentence in sentences:
+                try:
+                    if int(sentence.get("ID", -1)) == target_id:
+                        return sentence.get("sentence_text", "").strip()
+                except (TypeError, ValueError):
+                    continue
+            if 0 <= clip_idx < len(sentences):
+                return sentences[clip_idx].get("sentence_text", "").strip()
+
+        return sentences[0].get("sentence_text", "").strip()
+    except Exception as e:
+        print(f"[WARN] GT text load fail: {e}")
+        return ""
 
 
 def load_checkpoint(model, checkpoint_path, device='cpu'):
@@ -48,11 +105,11 @@ def prepare_avsr_inputs(config, vocab, video_path, audio_path, max_frames: int =
     signal, _ = librosa.load(audio_path, sr=config['audio_sample_rate'])
     # Raw audio transform (only reshape) if raw specified
     if config['audio_transform_method'] == 'raw':
-        audio_transform = lambda x: np.expand_dims(x,1)
+        audio_transform = lambda x: np.expand_dims(x, 1)
     else:
         raise ValueError("Currently fusion script only supports audio_transform_method='raw' for simplicity.")
     seqs = _parse_audio(signal, audio_transform, config['audio_normalize'])
-    seqs = seqs.permute(1,0)  # F T -> T F
+    seqs = seqs.permute(1, 0)  # F T -> T F
 
     # Dummy transcript tensor: just <sos> <eos>
     import torch as _torch
@@ -161,9 +218,9 @@ def avsr_ctc_confidence(
 
 
 def whisper_infer_with_conf(audio_path, model_size="small", language=None, method: str = 'avg'):
-    if whisper_noise_test is None:
+    if whisper is None:
         raise ImportError("whisper is not installed. pip install openai-whisper")
-    model = whisper_noise_test.load_model(model_size)
+    model = whisper.load_model(model_size)
     # word_timestamps=True to increase chance of token-level probabilities
     result = model.transcribe(audio_path, language=language, word_timestamps=True)
     text = result.get('text', '').strip()
@@ -343,7 +400,7 @@ def main():
         print(f"[WARN] Failed to compute AVSR CTC confidence: {e}")
         avsr_conf, avsr_frame_max_list, avsr_stats = None, [], {}
 
-    if whisper_noise_test is None:
+    if whisper is None:
         print("[WARN] Whisper not installed; skipping whisper transcription. pip install openai-whisper")
         whisper_text, stt_conf, stt_probs, stt_stats = '', None, [], {}
     else:
@@ -355,15 +412,15 @@ def main():
     # Selection by confidence thresholds and comparison
     stt_c = stt_conf if stt_conf is not None else 0.0
     avsr_c = avsr_conf if avsr_conf is not None else 0.0
-    if (stt_c < args.threshold_low) and (avsr_c > args.threshold_high):
-        selected = avsr_text
-        decision = 'AVSR_by_threshold'
-    elif stt_c > avsr_c:
+    if stt_c > args.threshold_high:          # T_good
         selected = whisper_text
-        decision = 'STT_by_higher_conf'
-    else:
+        decision = 'STT_conf_good'
+    elif stt_c < args.threshold_low:         # T_bad
         selected = avsr_text
-        decision = 'AVSR_by_fallback'
+        decision = 'AVSR_conf_bad_stt'
+    else:
+        selected = whisper_text              # 중간 구간도 STT
+        decision = 'STT_mid_range'
 
     print("\n=== Fusion Inference Result ===")
     print(f"AVSR   : {avsr_text}")
@@ -377,7 +434,8 @@ def main():
     print(f"Selected({decision}): {selected}")
 
     try:
-        import json
+        gt_text = load_gt_text_from_video_path(args.video_path)
+
         with open(args.out, 'w', encoding='utf-8') as fw:
             debug_section = {
                 'avsr_stats': avsr_stats,
@@ -396,9 +454,11 @@ def main():
             if args.log_detail:
                 debug_section['avsr_frame_max'] = avsr_frame_max_list
                 debug_section['stt_token_probs'] = stt_probs
+
             json.dump({
                 'video': args.video_path,
                 'audio': args.audio_path,
+                'gt_text': gt_text,  # ← 추가
                 'avsr_text': avsr_text,
                 'avsr_ctc_confidence': avsr_conf,
                 'whisper_text': whisper_text,
@@ -415,6 +475,8 @@ def main():
                 },
                 'debug': debug_section,
             }, fw, ensure_ascii=False, indent=2)
+
+
         print(f"Saved fused output JSON -> {args.out}")
     except Exception as e:
         print(f"[WARN] Failed to save JSON: {e}")

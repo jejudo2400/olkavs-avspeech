@@ -1,7 +1,7 @@
 import numpy as np
 import whisper_timestamped as whisper
 
-audio_path = r"sample_data\test_preprocessed_noisy\test\lip_subset\a\b\c\d\lip_J_1_F_02_C002_A_001\0_snr-5.0.wav"
+audio_path = r"sample_data\test_preprocessed_noisy\test\lip_subset\a\b\c\d\lip_J_1_F_02_C002_A_001\0_snr0.0.wav"
 
 model = whisper.load_model("small")
 

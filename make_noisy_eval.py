@@ -3,7 +3,7 @@ import os
 
 SRC_EVAL = "sample_data/test_eval_mediapipe.txt"  # 기존 깨끗한 eval 파일
 OUT_EVAL_TEMPLATE = "sample_data/test_eval_snr{snr}.txt"
-SNR_LIST = [0.0, -5.0, -10.0]
+SNR_LIST = [0.0]
 
 def make_noisy_eval():
     with open(SRC_EVAL, "r", encoding="utf-8") as f:

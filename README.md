@@ -141,6 +141,26 @@ Data folder should comply with [this](#directory) structure
 python preprocess.py --root_dir {ROOT_DIR} --src_dir {SOURCE_DIR} --label_dir {LABEL_DIR}
 ```
 
+### Add noise with controlled SNR (optional)
+
+Generate noisy counterparts with tunable SNR, pre-scaling, and a headroom clamp so that mixes at 0/−5/−10 dB are less overwhelming by default.
+
+```bash
+python add_noise_snr.py \
+    --clean_dir {CLEAN_WAV_ROOT} \
+    --noise_wav {NOISE_WAV_FILE} \
+    --out_dir {OUTPUT_DIR} \
+    --snrs 0 -5 -10 \
+    --noise_gain 0.85 \
+    --headroom_db 6 \
+    --snr_offset 2
+```
+
+- `--snrs`: Target SNRs in dB (defaults to `0 -5 -10`).
+- `--noise_gain` / `--clean_gain`: Optional pre-scaling applied before computing SNR (defaults `0.85` / `1.0`).
+- `--snr_offset`: Shifts requested SNRs (default `+2 dB`) to keep the noisy sets closer to clean audios.
+- `--headroom_db`: When the effective SNR is negative, caps the computed noise gain to avoid excessive boosting (default `6 dB`).
+
 **Generated Label Samples**
 ```
 {Video_filepath}\t{Audio_filepath}\t{Transcription}\t{Tokenized_Numbers}
