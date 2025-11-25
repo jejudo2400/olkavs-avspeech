@@ -11,3 +11,25 @@ sk-video
 soundfile
 tqdm
 soundfile
+
+# 기존 항목 유지 + 아래 추가
+openai-whisper==20250625        # STT
+numba==0.62.1                   # librosa/whisper 종속
+llvmlite==0.45.1
+sounddevice==0.5.3
+tiktoken==0.12.0                # whisper tokenizer
+requests==2.32.5
+certifi==2025.11.12
+charset-normalizer==3.4.4
+idna==3.11
+urllib3==2.5.0
+regex==2025.11.3
+fsspec==2025.10.0
+filelock==3.20.0
+typing_extensions==4.15.0
+Jinja2==3.1.6
+MarkupSafe==3.0.3
+networkx==3.4.2
+sympy==1.14.0
+mpmath==1.3.0
+colorama==0.4.6         # Windows 콘솔 필요시
