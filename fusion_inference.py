@@ -412,6 +412,12 @@ def main():
 
     fused = fuse_transcripts(avsr_text, whisper_text, args.avsr_weight, args.whisper_weight)
 
+    try:
+        gt_text = load_gt_text_from_video_path(args.video_path)
+    except Exception as e:
+        print(f"[WARN] GT text load fail: {e}")
+        gt_text = ''
+
     # Selection by confidence thresholds and comparison
     stt_c = stt_conf if stt_conf is not None else 0.0
     avsr_c = avsr_conf if avsr_conf is not None else 0.0
@@ -438,13 +444,12 @@ def main():
     print(f"Whisper: {whisper_text}")
     if stt_conf is not None:
         print(f"STT_conf({args.stt_conf_method}): {stt_c:.4f}")
-    print(f"Fused  : {fused}")
     print(f"Decision Path: {decision}")
     print(f"Selected({decision}): {selected}")
+    if gt_text:
+        print(f"정답: {gt_text}")
 
     try:
-        gt_text = load_gt_text_from_video_path(args.video_path)
-
         with open(args.out, 'w', encoding='utf-8') as fw:
             debug_section = {
                 'avsr_stats': avsr_stats,
