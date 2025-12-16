@@ -11,6 +11,9 @@ sk-video
 soundfile
 tqdm
 soundfile
+moviepy==1.0.3
+imageio==2.34.1
+imageio-ffmpeg==0.4.9
 
 # 기존 항목 유지 + 아래 추가
 openai-whisper==20250625        # STT

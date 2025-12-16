@@ -344,7 +344,7 @@ def fuse_transcripts(avsr_text, whisper_text, weight_avsr=0.2, weight_whisper=0.
     return result
 
 
-def parse_args():
+def parse_args(argv=None):
     p = argparse.ArgumentParser(description="AVSR + Whisper Fusion Inference")
     p.add_argument('--config', required=True, help='Path to AVSR inference yaml config')
     p.add_argument('--video_path', required=True, help='Video path (mp4 or npy)')
@@ -362,11 +362,10 @@ def parse_args():
     p.add_argument('--threshold_low', type=float, default=0.3, help='STT low threshold')
     p.add_argument('--threshold_high', type=float, default=0.7, help='AVSR high threshold')
     p.add_argument('--log_detail', action='store_true', help='Include per-frame and per-token probability arrays in JSON output')
-    return p.parse_args()
+    return p.parse_args(argv)
 
 
-def main():
-    args = parse_args()
+def run_fusion(args):
     with open(args.config, encoding='utf-8') as f:
         config = yaml.safe_load(f)
     if args.checkpoint:
@@ -494,6 +493,11 @@ def main():
         print(f"Saved fused output JSON -> {args.out}")
     except Exception as e:
         print(f"[WARN] Failed to save JSON: {e}")
+
+
+def main():
+    args = parse_args()
+    run_fusion(args)
 
 
 if __name__ == '__main__':

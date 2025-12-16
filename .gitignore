@@ -110,6 +110,12 @@ ENV/
 env.bak/
 venv.bak/
 
+# UI Application temporary clips
+tmp/
+uiclips/
+sample_data/split_clips/
+
+
 # Spyder project settings
 .spyderproject
 .spyproject
